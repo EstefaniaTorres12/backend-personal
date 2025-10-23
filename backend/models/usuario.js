@@ -2,6 +2,8 @@ const db = require('../config/config');
 const bcrypt = require('bcryptjs');
 const Usuario = {};
 const RolUsuario = require('./rolUsuario');
+const Cliente = require('./cliente');
+const dayjs = require('dayjs');
 
 
 Usuario.create = async (user, result) => {
@@ -16,7 +18,8 @@ Usuario.create = async (user, result) => {
                     usuario_correo,
                     usuario_direccion,
                     usuario_credencial
-                    )VALUES (?,?,?,?,?,?,?,?)`;
+                    ) VALUES (?,?,?,?,?,?,?,?)`;
+
     db.query(sql, [
         user.usuario_primer_nombre,
         user.usuario_segundo_nombre,
@@ -32,22 +35,49 @@ Usuario.create = async (user, result) => {
             result(err, null);
         } else {
             console.log('Usuario creado: ', { usuario_id: res.insertId, ...user });
-            let rolUsuario = {};
-            rolUsuario.rol_id = user.rol_id,
-            rolUsuario.usuario_id = res.insertId,
-            rolUsuario.estado_cred = true,
+            asignarRolUsuario(user, res.insertId, result);
+          
+        }
+    });
+};
 
-            RolUsuario.create(rolUsuario, (error, datos) => {
-                if (error){
-                    result(error, null);
-                }else{
-                    result(null, { usuario_id: res.insertId, ...user });
-                }
-            });
+
+function asignarRolUsuario(user, insertId, result) {
+    let rolUsuario = {
+        rol_id: user.rol_id,
+        usuario_id: insertId,
+        estado_cred: true
+    };
+
+    RolUsuario.create(rolUsuario, (error, datos) => {
+        if (error) {
+            result(error, null);
+        } else {
+              datosCliente(user, insertId, result);
             
         }
     });
+};
 
+
+function datosCliente(user, insertId, result ){
+    let hoy = new Date();
+    let años = dayjs(hoy).diff(user.cliente_fecha_nacimiento,"year");
+    console.log(años);
+    console.log(dayjs(user.cliente_fecha_nacimiento, "DD/MM/YYYY").toDate())
+    let cliente = {
+        cliente_id : insertId,
+        cliente_fecha_nacimiento: user.cliente_fecha_nacimiento,
+        cliente_edad: años
+    };
+
+    Cliente.create(cliente, (error, datos) => {
+        if (error) {
+            result(error, null);
+        } else {
+            result(null, { usuario_id: insertId, ...user });
+        }
+    });
 };
 
 module.exports = Usuario;
