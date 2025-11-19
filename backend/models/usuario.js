@@ -5,9 +5,7 @@ const RolUsuario = require('./rolUsuario');
 const Cliente = require('./cliente');
 const dayjs = require('dayjs');
 
-
-
-
+// Crear usuario
 Usuario.create = async (user, result) => {
     const hash = await bcrypt.hash(user.usuario_credencial, 10);
 
@@ -38,12 +36,11 @@ Usuario.create = async (user, result) => {
         } else {
             console.log('Usuario creado: ', { usuario_id: res.insertId, ...user });
             asignarRolUsuario(user, res.insertId, result);
-
         }
     });
 };
 
-
+// Asignar rol al usuario
 function asignarRolUsuario(user, insertId, result) {
     let rolUsuario = {
         rol_id: user.rol_id,
@@ -56,17 +53,15 @@ function asignarRolUsuario(user, insertId, result) {
             result(error, null);
         } else {
             datosCliente(user, insertId, result);
-
         }
     });
-};
+}
 
-
+// Crear datos de cliente
 function datosCliente(user, insertId, result) {
     let hoy = new Date();
     let años = dayjs(hoy).diff(user.cliente_fecha_nacimiento, "year");
-    console.log(años);
-    console.log(dayjs(user.cliente_fecha_nacimiento, "DD/MM/YYYY").toDate())
+
     let cliente = {
         cliente_id: insertId,
         cliente_fecha_nacimiento: user.cliente_fecha_nacimiento,
@@ -80,51 +75,55 @@ function datosCliente(user, insertId, result) {
             result(null, { usuario_id: insertId, ...user });
         }
     });
-};
+}
 
+// Obtener usuario por ID
 Usuario.findById = (id, result) => {
-    const sql = `SELECT  usuario_id,
-                    usuario_primer_nombre,
-                    usuario_segundo_nombre,
-                    usuario_primer_apellido,
-                    usuario_segundo_apellido,
-                    usuario_documento,
-                    usuario_correo,
-                    usuario_direccion,
-                    usuario_credencial FROM USUARIO where usuario_id = ?`;
+    const sql = `SELECT usuario_id,
+                        usuario_primer_nombre,
+                        usuario_segundo_nombre,
+                        usuario_primer_apellido,
+                        usuario_segundo_apellido,
+                        usuario_documento,
+                        usuario_correo,
+                        usuario_direccion,
+                        usuario_credencial 
+                 FROM USUARIO 
+                 WHERE usuario_id = ?`;
     db.query(sql, [id], (err, user) => {
         if (err) {
             console.log('Error al consultar : ', err);
             result(err, null);
         } else {
-            console.log('Usuario consultado: ', user[0]);
             result(null, user[0]);
         }
     });
 };
 
+// Obtener usuario por documento
 Usuario.findByDocument = (documento, result) => {
     const sql = `SELECT usuario_id,
-                    usuario_primer_nombre,
-                    usuario_segundo_nombre,
-                    usuario_primer_apellido,
-                    usuario_segundo_apellido,
-                    usuario_documento,
-                    usuario_correo,
-                    usuario_direccion,
-                    usuario_credencial FROM USUARIO where usuario_documento = ?`;
+                        usuario_primer_nombre,
+                        usuario_segundo_nombre,
+                        usuario_primer_apellido,
+                        usuario_segundo_apellido,
+                        usuario_documento,
+                        usuario_correo,
+                        usuario_direccion,
+                        usuario_credencial 
+                 FROM USUARIO 
+                 WHERE usuario_documento = ?`;
     db.query(sql, [documento], (err, doc) => {
         if (err) {
             console.log('Error al consultar : ', err);
             result(err, null);
         } else {
-            console.log('Uusario Consultado : ', doc[0]);
             result(null, doc[0]);
         }
     });
 };
 
-
+// Actualizar usuario
 Usuario.update = async (usuario, result) => {
     let fields = [];
     let values = [];
@@ -134,32 +133,26 @@ Usuario.update = async (usuario, result) => {
         fields.push('usuario_credencial = ?');
         values.push(hash);
     }
-
     if (usuario.usuario_correo) {
         fields.push('usuario_correo = ?');
         values.push(usuario.usuario_correo);
     }
-
     if (usuario.usuario_primer_nombre) {
         fields.push('usuario_primer_nombre = ?');
         values.push(usuario.usuario_primer_nombre);
     }
-
     if (usuario.usuario_segundo_nombre) {
         fields.push('usuario_segundo_nombre = ?');
         values.push(usuario.usuario_segundo_nombre);
     }
-
     if (usuario.usuario_primer_apellido) {
         fields.push('usuario_primer_apellido = ?');
         values.push(usuario.usuario_primer_apellido);
     }
-
     if (usuario.usuario_segundo_apellido) {
         fields.push('usuario_segundo_apellido = ?');
         values.push(usuario.usuario_segundo_apellido);
     }
-
     if (usuario.usuario_direccion) {
         fields.push('usuario_direccion = ?');
         values.push(usuario.usuario_direccion);
@@ -173,24 +166,52 @@ Usuario.update = async (usuario, result) => {
             console.log('Error al actualizar usuario: ', err);
             result(err, null);
         } else {
-            console.log('Usuario actualizado: ', { usuario_id: usuario.usuario_id, ...usuario });
             result(null, { usuario_id: usuario.usuario_id, ...usuario });
         }
     });
-
-
 }
 
-Usuario.delete = (id, result)=>{
+// Eliminar usuario
+Usuario.delete = (id, result) => {
     const sql = `DELETE FROM usuario WHERE usuario_id = ?`;
-    db.query(sql, [id], (err, res ) => {
-        if (err){
+    db.query(sql, [id], (err, res) => {
+        if (err) {
             console.log('Error al eliminar usuario: ', err);
             result(err, null);
-        }else{
-            console.log('Usuario elimiinado:', id);
+        } else {
             result(null, res);
         }
+    });
+};
+
+// Buscar usuario por email con rol (para login con JWT)
+Usuario.findByEmailWithRole = (email, result) => {
+    const sql = `
+        SELECT 
+            USUARIO.usuario_id,
+            USUARIO.usuario_primer_nombre,
+            USUARIO.usuario_segundo_nombre,
+            USUARIO.usuario_primer_apellido,
+            USUARIO.usuario_segundo_apellido,
+            USUARIO.usuario_documento,
+            USUARIO.usuario_correo,
+            USUARIO.usuario_direccion,
+            USUARIO.usuario_credencial,
+            ROL.rol_nombre
+        FROM USUARIO
+        INNER JOIN ROL_USUARIO 
+            ON USUARIO.usuario_id = ROL_USUARIO.usuario_id
+        INNER JOIN ROL 
+            ON ROL_USUARIO.rol_id = ROL.rol_id
+        WHERE USUARIO.usuario_correo = ?
+    `;
+
+    db.query(sql, [email], (err, res) => {
+        if (err) {
+            console.log("Error en findByEmailWithRole:", err);
+            return result(err, null);
+        }
+        return result(null, res[0]);
     });
 };
 

@@ -3,12 +3,13 @@ const router = express.Router();
 const usuarioController = require('../controllers/usuarioController');
 const { verifyToken, authorizeRoles } = require('../middlewares/authMiddleware');
 
-
+router.post('/login', usuarioController.login);
 router.post('/usuarioCreate', usuarioController.register);
 
-router.get('/id/:id', usuarioController.getUsuarioById);
-router.get('/documento/:documento', usuarioController.getUsuarioByDocument);
-router.put('/update/:id',usuarioController.getUsuarioUpdate);
-router.delete('/deleteU/:id',usuarioController.getUsuarioDelete);
+//rutas protegidas
+router.get('/id/:id', verifyToken, authorizeRoles(['Administrador', 'Asesor']), usuarioController.getUsuarioById);
+router.get('/documento/:documento', verifyToken, authorizeRoles(['Administrador', 'Asesor']), usuarioController.getUsuarioByDocument);
+router.put('/update/:id', verifyToken, authorizeRoles(['Administrador', 'Asesor']), usuarioController.getUsuarioUpdate);
+router.delete('/deleteU/:id',verifyToken, authorizeRoles(['Administrador', 'Asesor']), usuarioController.getUsuarioDelete);
 
 module.exports = router;
