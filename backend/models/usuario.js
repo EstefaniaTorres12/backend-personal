@@ -50,9 +50,14 @@ function asignarRolUsuario(user, insertId, result) {
 
     RolUsuario.create(rolUsuario, (error, datos) => {
         if (error) {
-            result(error, null);
-        } else {
+            return result(error, null);
+        }
+
+        if (user.rol_id === 3) {
             datosCliente(user, insertId, result);
+        } else {
+            // Si NO es cliente, terminar aquí
+            result(null, { usuario_id: insertId, ...user });
         }
     });
 }
